@@ -22,3 +22,5 @@
 !src/
 !src/**/
 !src/**/*.py
+
+!README.md
