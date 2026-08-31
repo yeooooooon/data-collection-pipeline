@@ -16,19 +16,13 @@ data/interim/YYYYMMDD_HHMMSS 형태의 배치 폴더를 사용합니다.
         books_pages_001_003_processed_YYYYMMDD_HHMMSS.csv
 """
 
+import re
 from datetime import datetime
 from pathlib import Path
-import re
 
 import pandas as pd
 
-
-CATALOGUE_URL = 'https://books.toscrape.com/catalogue/'
-SOURCE_SITE = 'Books to Scrape'
-
-PROJECT_DIR = Path(__file__).resolve().parents[2]
-INTERIM_DIR = PROJECT_DIR / 'data' / 'interim'
-PROCESSED_DIR = PROJECT_DIR / 'data' / 'processed'
+from .config import APP_TIMEZONE, BASE_URL, INTERIM_DIR, PROCESSED_DIR, SOURCE_SITE
 
 BATCH_DIR_PATTERN_RE = re.compile(r'^\d{8}_\d{6}$')
 PARSED_CSV_PATTERN = 'books_page_*_parsed.csv'
@@ -100,7 +94,7 @@ def parse_batch_directory_name(batch_dir: Path) -> datetime:
     if BATCH_DIR_PATTERN_RE.fullmatch(batch_dir.name) is None:
         raise ValueError(f'interim 배치 폴더명 형식이 올바르지 않습니다. {batch_dir.name}')
 
-    return datetime.strptime(batch_dir.name, '%Y%m%d_%H%M%S')
+    return datetime.strptime(batch_dir.name, '%Y%m%d_%H%M%S').replace(tzinfo=APP_TIMEZONE)
 
 
 def find_latest_interim_batch_directory(directory: Path = INTERIM_DIR) -> Path:
@@ -403,7 +397,7 @@ def preprocess_books(
 
     validate_input_books(books_df)
 
-    processed_at = pd.Timestamp.now().floor('s')
+    processed_at = pd.Timestamp.now(tz=APP_TIMEZONE).floor('s')
     processed_df = clean_string_columns(books_df)
 
     ## 가격 문자열에서 숫자를 추출하여 price 컬럼 생성
@@ -484,7 +478,7 @@ def validate_processed_books(df: pd.DataFrame) -> dict[str, int]:
     invalid_rating_count = int((~df['rating'].between(1, 5)).sum())
     invalid_page_count = int((df['source_page'] <= 0).sum())
     invalid_url_count = int(
-        (~df['detail_url'].str.startswith(CATALOGUE_URL, na=False)).sum()
+        (~df['detail_url'].str.startswith(BASE_URL, na=False)).sum()
     )
     duplicate_url_count = int(df['detail_url'].duplicated(keep=False).sum())
     duplicate_book_id_count = int(df['book_id'].duplicated(keep=False).sum())
@@ -513,8 +507,8 @@ def validate_processed_books(df: pd.DataFrame) -> dict[str, int]:
         raise ValueError('전처리 데이터 검증 실패\n' + '\n'.join(errors))
 
     return {
-        'row_count': int(len(df)),
-        'column_count': int(len(df.columns)),
+        'row_count': len(df),
+        'column_count': len(df.columns),
         'duplicate_url_count': duplicate_url_count,
         'null_count': int(df.isna().sum().sum()),
     }
@@ -553,7 +547,7 @@ def save_csv_atomically(df: pd.DataFrame, file_path: Path) -> Path:
             temp_path,
             index=False,
             encoding='utf-8-sig',
-            date_format='%Y-%m-%d %H:%M:%S',
+            date_format='%Y-%m-%dT%H:%M:%S%z',
         )
         temp_path.replace(file_path)
 

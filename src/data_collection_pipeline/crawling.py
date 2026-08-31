@@ -19,45 +19,28 @@ run_crawling()에서 전체 페이지네이션 수집 작업을 실행합니다.
         생성된 raw HTML 배치 폴더 경로
 """
 
+import time
 from datetime import datetime
 from pathlib import Path
-import time
 
 import requests
 
+from .config import (
+    APP_TIMEZONE,
+    BASE_URL,
+    CONNECT_TIMEOUT,
+    END_PAGE,
+    HEADERS,
+    PROJECT_DIR,
+    RAW_HTML_DIR,
+    READ_TIMEOUT,
+    REQUEST_INTERVAL,
+    START_PAGE,
+)
 
 ## ===========================================================
-## 1. 수집 설정
+## 1. 기본 설정 확인
 ## ===========================================================
-
-## 페이지 URL의 공통 부분
-## 예: https://books.toscrape.com/catalogue/page-1.html
-BASE_URL = 'https://books.toscrape.com/catalogue/'
-
-## 수집할 페이지 범위
-START_PAGE = 1
-END_PAGE = 3
-
-## 요청 제한 시간
-CONNECT_TIMEOUT = 5
-READ_TIMEOUT = 30
-
-## 연속 요청 사이의 대기 시간(초)
-REQUEST_INTERVAL = 0.5
-
-## HTTP 요청 헤더
-HEADERS = {'User-Agent': 'EducationalDataCollector/1.0'}
-
-
-## ===========================================================
-## 2. 기본 저장 경로 설정
-## ===========================================================
-
-## Notebook 실행 시 프로젝트 루트
-PROJECT_DIR = Path(__file__).resolve().parents[2]
-
-## 모든 HTML 수집 배치가 저장되는 기본 폴더
-RAW_HTML_DIR = PROJECT_DIR / 'data' / 'raw' / 'html'
 
 print(f'프로젝트 기준 경로 : {PROJECT_DIR}')
 print(f'원본 HTML 기본 저장 경로 : {RAW_HTML_DIR}')
@@ -213,7 +196,8 @@ def run_crawling(
         raise ValueError('시작 페이지는 종료 페이지보다 클 수 없습니다.')
 
     ## 전체 수집 작업의 시작 시각
-    collected_at = datetime.now()
+    ## 한국 표준시(KST) 기준 (zoneinfo 모듈 활용)
+    collected_at = datetime.now(APP_TIMEZONE)
 
     ## 같은 수집 작업의 HTML을 저장할 배치 폴더 생성
     batch_dir = create_batch_directory(
