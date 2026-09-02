@@ -1,0 +1,5 @@
+{
+  "batch_id": "20260901_115103",
+  "bucket": "books-pipeline-databucket-okgonfpoakxe",
+  "interim_prefix": "interim/20260901_115103/"
+}
